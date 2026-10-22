@@ -1,0 +1,55 @@
+---
+title: "Session 2 Lab Assignment: Tidyverse"
+author: "Dino Noah Wildi"
+format: html
+---
+
+```{r}
+#| message: False
+
+library(tidyverse)
+ds <- penguins
+```
+
+## Selecting, filtering, and summarising
+
+Run the code chunk above to load tidyverse and load the penguins dataset, which contains data on the size of penguins in an archipelago in Antarctica. The data is already tidy, but it is quite sizable. Let's first take a look at the data. Answer the following questions. For each question, include the code chunk right under the question.
+
+1) How many penguins live on each island? (Hint: remember last week's script on basic R functions)
+
+2) For now, we are not interested in the year of observation, or the statistics on penguin bills. Drop the columns related to those.
+
+3) Filter the data so that only penguins on Dream and Biscoe island are included.
+
+4) Filter out all rows where either sex or mean_mass is not available. (Hint: Use the is_na() function)
+
+5) Create a new data frame called "penguin_size" that shows the mean body mass per species and sex.
+
+## Mutating and pivoting
+
+```{r}
+#| message: False
+
+library(nycflights13)
+flights <- flights
+```
+
+"Flights" is a larger dataset that contains data on flights leaving from New York airports in 2013. We are performing some calculations on flight times and delays to practice creating variables and doing more complex summary operations.
+
+6) distance contains the distance of a flight in miles. air_time contains the time a flight spent in the air, in minutes. Create two columns called "km" and "hours" that contain the distance in kilometres and tte time in minutes (a mile is 1.609 km).
+
+7) Create a column showing the average speed of each flight.
+
+8) Using ```mutate(case_when())```, tag flights based on which season they occurred in (Winter for December-February, Spring for March-May, Summer for June-August, Autumn for September-November).
+
+9) Which season has the longest average delay? (Use ?flights to find out which column contains which data).
+
+10) Look at the code below that creates a table showing the number of flights departing from each NYC airport every month and airport. Make sure you understand it:
+
+```{r}
+flight_nr <- flights |> 
+  filter(origin %in% c("LGA", "JFK", "EWR")) |> 
+  group_by(month, origin) |> 
+  summarise(flights = n())
+```
+Pivot the table using pivot_wider so that it shows each month as a row and each airport as a column. Then pivot it back to the original format using pivot_longer.
