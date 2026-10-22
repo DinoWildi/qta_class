@@ -1,0 +1,38 @@
+---
+title: "Session 2 Lab Assignment: Tidyverse"
+author: "Dino Noah Wildi"
+format: html
+---
+
+```{r}
+#| message: False
+
+library(tidyverse)
+library(nycflights13)
+ds <- penguins
+```
+
+## Selecting, filtering, and summarising
+
+Run the code chunk above to load tidyverse and load the penguins dataset, which contains data on the size of penguins in an archipelago in Antarctica. The data is already tidy, but it is quite sizable. Let's first take a look at the data. Answer the following questions. For each question, include the code chunk right under the question.
+
+1) How many penguins live on each island? (Hint: remember last week's script on basic R functions)
+
+2) For now, we are not interested in the year of observation, or the statistics on penguin bills. Drop the columns related to those.
+
+3) Filter the data so that only penguins on Dream and Biscoe island are included.
+
+4) Filter out all rows where either sex or mean_mass is not available. (Hint: Use the is_na() function)
+
+5) Create a new data frame called "penguin_size" that shows the mean body mass per species and sex.
+
+## Mutating and pivoting
+
+```{r}
+#| message: False
+
+library(nycflights13)
+flights <- flights
+```
+
+"Flights" is a larger dataset that 
