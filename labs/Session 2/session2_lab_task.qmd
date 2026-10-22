@@ -36,7 +36,7 @@ flights <- flights
 
 "Flights" is a larger dataset that contains data on flights leaving from New York airports in 2013. We are performing some calculations on flight times and delays to practice creating variables and doing more complex summary operations.
 
-6) distance contains the distance of a flight in miles. air_time contains the time a flight spent in the air, in minutes. Create two columns called "km" and "hours" that contain the distance in kilometres and tte time in minutes (a mile is 1.609 km).
+6) distance contains the distance of a flight in miles. air_time contains the time a flight spent in the air, in minutes. Create two columns called "km" and "hours" that contain the distance in kilometres and tte time in hours (a mile is 1.609 km).
 
 7) Create a column showing the average speed of each flight.
 
@@ -47,6 +47,7 @@ flights <- flights
 10) Look at the code below that creates a table showing the number of flights departing from each NYC airport every month and airport. Make sure you understand it:
 
 ```{r}
+#| message: False
 flight_nr <- flights |> 
   filter(origin %in% c("LGA", "JFK", "EWR")) |> 
   group_by(month, origin) |> 
