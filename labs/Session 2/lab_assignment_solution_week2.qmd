@@ -1,8 +1,12 @@
 ---
-title: "Session 2 Lab Assignment: Tidyverse"
+title: "Session 2 Lab Assignment: Tidyverse -- Solutions"
 author: "Dino Noah Wildi"
 format: html
 ---
+
+Notes:
+a) This is just one possible solution, representing the way I would handle the task. In many cases there are alternative solutions that would also function. If your code runs smoothly and returns correct results, you will get full marks even if you are not using the same solution.
+b) The chunks provided by me use the "message: False" option to suppress the output of the code. In your code, you should ideally not use this option. I don't mind for this task since I didn't mention this earlier, and this task is simple enough that I can assess the code by eye; in the future, I'd recommend not using it in your own chunks.
 
 ```{r}
 #| message: False
