@@ -35,4 +35,4 @@ We will use some functions that were not covered in the lecture. Most of the tas
 
 7) What are the 10 most common features in the texts?
 
-8) Create a document-feature-matrix of all speeches in the corpus. How do the 10 most common terms across all years differ from the 21st century corpus?
+8) Create a document-feature-matrix of all speeches in the corpus. How do the 10 most common features across all years differ from the 21st century corpus?
