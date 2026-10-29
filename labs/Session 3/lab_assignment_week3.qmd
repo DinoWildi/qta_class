@@ -1,0 +1,38 @@
+---
+title: "Lab Session Week 3"
+author: "Dino Wildi"
+format: html
+---
+
+In this lab session, we are transforming a corpus of inaugural speeches of US Presidents into a Document-Feature-matrix. We are not yet worrying about creating a corpus - that will come when we talk about finding and importing your own texts. This corpus comes included with quanteda and can be loaded just by assigning it to a variable:
+
+```{r}
+#| message: False
+
+library(quanteda)
+speeches <- data_corpus_inaugural
+```
+
+We will use some functions that were not covered in the lecture. Most of the tasks we are applying here can be found in the [https://tutorials.quanteda.io/]{quanteda tutorials} by Müller and Watanabe.
+
+## Working with the corpus
+
+1) Display the head of the corpus itself and of the document variables.
+
+2) Create a new corpus that only contains speeches made in the 21st century. Check how many documents are in the new corpus (there should be 7). Print the number of tokens in each speech.
+
+3) Create a new corpus that takes the 21st century speeches and reshapes them to the sentence level. How many tokens are in the longest sentence in the corpus?
+
+## Tokenization
+
+4) Take the 21st century corpus (with the documents being full speeches). Tokenize it while removing punctuation. Then remove all English stopwords as well. Compare the length of the tokenized speeches to the number of tokens you got in 2).
+
+5) Take any instance of "United States" in the speeches and compound the token to "United_States".
+
+## DFM
+
+6) Create a document-feature-matrix of the token object you have made. Trim it by deleting all features with less than 10 occurrences. Print its first rows with ```head()```.
+
+7) What are the 10 most common features in the texts?
+
+8) Create a document-feature-matrix of all speeches in the corpus. How do the 10 most common terms across all years differ from the 21st century corpus?
