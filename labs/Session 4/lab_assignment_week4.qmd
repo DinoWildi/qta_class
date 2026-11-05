@@ -1,0 +1,47 @@
+---
+title: "Lab Assignment: Week 4"
+author: "Dino Wildi"
+format: html
+---
+
+Until now, the lab assignments have been mostly disjointed tasks that were designed to have you play with different functions, get familiar with R and quanteda, and just "get your hands dirty" with data. From this week on, we are shifting more to (small) research/analysis tasks you may do in a paper. This means that handling variables correctly and building a cohesive script starts mattering more. From this assignment onwards, here are some guidelines I want you to reflect. These guidelines will also be part of the grading:
+
+* You will occasionally need to install new packages (this should be clear from the task) and do other "management" tasks. Please do those from the console rather than the script.
+* Always save changes made to datasets in a variable. I leave it up to you when you overwrite old variables and when you create new ones, but a good rule of thumb is: "Save the raw data in its own variable, and then create a new variable every time you assume you will still need the old version of the dataset". That is, it's usually not ideal to make a new variable if you just add a column, but if you reshape a corpus or subset it, you may want to do so.
+* You will increasingly have to make multiple steps at once. You don't have to show results for every step, but write functional code for the entire workflow. Use comments to structure your code as you think it is required.
+
+
+```{r}
+library(tidyverse)
+library(quanteda)
+
+speeches <- data_corpus_inaugural
+```
+
+## Part 1: The Dictionary
+
+1) For this task, we use the Newsmap dictionary, which has the names of nations, their demonyms, and key cities to detect mentions of countries. Install the "newsmap" package, and find the command to save the English version of the dictionary to a variable called "dict_nations". Call ```str(dict_nations)``` **from the console** and take a look at the dictionary.
+
+This is a nested dictionary, i.e. its keys (countries) are grouped on multiple levels (regions and continents). From an R perspective, it is a list of lists. Let's look at Europe as an example: Within the list that makes up the overall object, there is a list called "EUROPE". This list contains four lists called "EAST", "NORTH", "SOUTH", and "WEST", corresponding to the four regions of Europe. The sublist EUROPE-WEST contains 9 character vectors, each named after a country's two-letter-code.
+
+Within a list, we can call each entry by putting its name into double square brackets. As an example, if we want to look up the contents of the sublist "EUROPE", we can use ```dict_nations[["EUROPE"]]```. We can also combine multiple such calls: ```dict_nations[["EUROPE"]][["NORTH"]]``` would show us the entries for Northern Europe only. We can also call functions using this syntax: ```length()``` would show us the number of entries, ```names()``` shows the names of entries, etc.
+
+2) For each continent, print the names of the regions within it.
+
+3) Print the keywords for Germany.
+
+## Part 2: Looking up Continents in Presidential Speeches
+
+4) Load the presidential speeches corpus we worked with last week, and tokenize it. Remove all punctuation and stopwords, and convert all tokens to lower case. You do not need to show any results for this step - raw code is fine.
+
+5) ```toks_lookup()``` replaces tokens that are in the dictionary with the corresponding dictionary key. With a nested dictionary, you can use the *levels* argument in ```toks_lookup()``` to access the desired level of the nesting. Apply the dictionary to the tokenized speeches, convert the results to a DFM, and print the total number of mentions each continent gets (hint: this corresponds to the column sums of the DFM).
+
+6) Group the DFM you created by year (using quanteda's ```dfm_group()``` function) and convert it to a dataframe. Pivot it to long form, so that every combination of year and continent is its own row. Create a new variable called "year" that expresses the doc_id variable as a number using ```as.numeric()```. Create a line plot that shows the mentions of each continent over time.
+
+## Part 3: Mentions of the USA
+
+If you look at the mentions of American countries, you notice an up-and-down pattern after World War 2 (from 1946 onwards). This pattern alternates almost perfectly - does it perhaps reflect differences between Democratic and Republican presidents? Let's analyse this:
+
+7) Subset the corpus to only those speeches held from 1946 onward. Tokenize them and apply the dictionary on the national level and create a DFM. Then, group the DFM by party and convert it to a dataframe. Filter the dataframe to only include mentions of the USA and print it.
+
+8) Create a bar plot showing mentions of the USA in inaugural speeches, separated by party. Interpret the results.
