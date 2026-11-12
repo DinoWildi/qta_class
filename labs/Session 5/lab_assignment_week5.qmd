@@ -1,0 +1,26 @@
+---
+title: "Session 5 Lab Assignment"
+author: "Dino Wildi"
+format: html
+---
+
+```{r}
+#| message: false # This option deactivates output. I will from now on put it into the package-loading chunk.
+library(tidyverse)
+library(quanteda)
+```
+
+## Sentiment analysis of incumbents vs. challengers
+
+Who is speaking positively in US Presidential inauguration speeches? One possible hypothesis would be that presidents who come in as part of the incumbent party will speak more positively to highlight their own (or their partymate's) accomplishment, whereas presidents elected as challengers might be a bit more negative as they highlight the failings of the previous administration. In this lab session, we will test that hypothesis using the LSD (Lexicoder Sentiment Dictionary) and the by now familiar inaugural speeches dataset.
+
+1) Load the presidential speeches dataset. Create a new document variable "incumbent_party" that takes the value 1 if the speech immediately before was held by a president from the same party (hint: use tidyverse's ```if_else()``` function in combination with the ```lag()``` function). It doesn't matter if a president is in his second term, or if he is following on a president from the same party.
+
+2) Filter the corpus to speeches held after World War 2 (from 1946 onwards) and tokenize it. Apply the LSD dictionary (it is called "data_dictionary_LSD2015" in quanteda) to the corpus, and create a DFM of the results. Print the first rows using ```head()```.
+
+3) Convert the dfm you just made to a data.frame and calculate the positivity score using the log-odds ratio formula we looked at in class (remember to include the neg_positive and neg_negative variables!). Add the incumbent party variable you made to this new data.frame with the dollar sign operator: ```dfmat$incumbent_party <- corpus$incumbent_party```. Sort the data.frame by positivity and print the 5 most and least positive speeches.
+
+4) Create a scatter plot (```geom_point()```) that shows the positivity of each speech in the dataframe you just made.  
+BONUS: Find out how to order your plot so that the most positive speech is at the top, and the least positive speech is on the bottom!
+
+5) Create a box plot with incumbency on the x axis and positivity on the y axis. Group the plot by incumbency using ```aes(group())```. Interpret the box plot.
