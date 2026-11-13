@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Example Code Session 5: Sentiment Analysis</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="example_code_sentiment_files/libs/clipboard/clipboard.min.js"></script>
+<script src="example_code_sentiment_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="example_code_sentiment_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="example_code_sentiment_files/libs/quarto-html/popper.min.js"></script>
+<script src="example_code_sentiment_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="example_code_sentiment_files/libs/quarto-html/anchor.min.js"></script>
+<link href="example_code_sentiment_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="example_code_sentiment_files/libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="example_code_sentiment_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="example_code_sentiment_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="example_code_sentiment_files/libs/bootstrap/bootstrap-215b371544c282197b31c8aa00ce3677.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Example Code Session 5: Sentiment Analysis</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>We will briefly go over the basics for sentiment analysis again and take a look at how we can check the words driving a result, and talk at slightly more length about targeted sentiment analysis. We will use a slightly different example text corpus here: <code>data_corpus_irishbudget2010</code>. This corpus consists of 14 speeches from the 2010 budget debate in the Irish parliament, and comes with the <code>quanteda.textmodels</code> package.</p>
+<section id="basic-sentiment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="basic-sentiment-analysis">Basic sentiment analysis</h2>
+<div class="cell">
+<div class="cell-output cell-output-stderr">
+<pre><code>── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+✔ dplyr     1.2.1     ✔ readr     2.2.0
+✔ forcats   1.0.1     ✔ stringr   1.6.0
+✔ ggplot2   4.0.3     ✔ tibble    3.3.1
+✔ lubridate 1.9.5     ✔ tidyr     1.3.2
+✔ purrr     1.2.2     
+── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+✖ dplyr::filter() masks stats::filter()
+✖ dplyr::lag()    masks stats::lag()
+ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
+Package version: 4.5.1
+Unicode version: 15.1
+ICU version: 74.1
+
+Parallel computing: 28 of 28 threads used.
+
+See https://quanteda.io for tutorials and examples.</code></pre>
+</div>
+</div>
+<p>In order to use a sentiment dictionary, we need to load and tokenize the corpus again, as we did last time. We will also remove stopwords once again, and put the words to lowercase.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>corp_ire <span class="ot">&lt;-</span> data_corpus_irishbudget2010</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>toks_ire <span class="ot">&lt;-</span> <span class="fu">tokens</span>(corp_ire,</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">remove_punct =</span> T) <span class="sc">|&gt;</span> </span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_remove</span>(<span class="fu">stopwords</span>(<span class="st">"en"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_tolower</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Let’s apply the Lexicoder Sentiment Dictionary (LSD, see Soroka &amp; Young 2012) and group by party:</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>sent_ire <span class="ot">&lt;-</span> <span class="fu">tokens_lookup</span>(toks_ire,</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">dictionary =</span> data_dictionary_LSD2015) <span class="sc">|&gt;</span> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">convert</span>(<span class="at">to =</span> <span class="st">"data.frame"</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>sent_ire</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                      doc_id negative positive neg_positive neg_negative
+1        Lenihan, Brian (FF)      185      396            0            0
+2       Bruton, Richard (FG)      157      148            0            0
+3         Burton, Joan (LAB)      220      266            0            0
+4        Morgan, Arthur (SF)      250      248            0            0
+5          Cowen, Brian (FF)      147      366            0            0
+6           Kenny, Enda (FG)      101      146            0            0
+7      ODonnell, Kieran (FG)       49       84            0            0
+8       Gilmore, Eamon (LAB)      161      175            0            0
+9     Higgins, Michael (LAB)       37       42            0            0
+10       Quinn, Ruairi (LAB)       34       40            0            0
+11     Gormley, John (Green)       16       56            0            0
+12       Ryan, Eamon (Green)       24       77            0            0
+13     Cuffe, Ciaran (Green)       36       56            0            0
+14 OCaolain, Caoimhghin (SF)      146      145            0            0</code></pre>
+</div>
+</div>
+<p>Let’s apply the log odds formula we discussed in class, and then plot overall sentiment. Two quick pointers:</p>
+<ul>
+<li>We are omitting the negation columns (neg_negative and neg_positive) since the df we just created showed that there are no mentions of those anyway. Normally, you should include them!</li>
+<li>You are probably not familiar with the <code>fct_reorder()</code> command in the ggplot call. This is a useful command that re-orders a factor (check <a href="https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/factor">the R documentation</a> for more info what a factor is) by the corresponding values of the variable provided - for example in our code, <code>fct_reorder(doc_id, positivity)</code> rearranges <em>doc_id</em> according to the value of <em>positivity</em>.</li>
+</ul>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>sent_ire <span class="ot">&lt;-</span> <span class="fu">mutate</span>(sent_ire,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">positivity =</span> <span class="fu">log</span>((positive <span class="sc">+</span> .<span class="dv">5</span>) <span class="sc">/</span> (negative <span class="sc">+</span> .<span class="dv">5</span>))</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sent_ire) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> positivity, </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="fu">fct_reorder</span>(doc_id, positivity)</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">+</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Sentiment of Irish TD's, 2010 Budget Debate"</span>,</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Estimated sentiment score"</span>,</span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">""</span>) <span class="sc">+</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_code_sentiment_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>This is interesting - but what does that tell us? Who are these people? In 2010, the Irish government was a coalition of centre-right party Fianna Fáil (FF) and the Greens (Green). Let’s use the document variables to check for the difference of government and opposition. For this, we need to actually access the document variables. There are two ways to do so. One is to use the $ operator (remember the syntax from the first session: <code>dataframe$variable</code>) to directly access columns. To do so, always pay attention that you actually use the correct</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Creating a government-opposition variable:</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>toks_ire<span class="sc">$</span>gov_status <span class="ot">&lt;-</span> <span class="fu">if_else</span>(toks_ire<span class="sc">$</span>party <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"FF"</span>, <span class="st">"Green"</span>),</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"Government"</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>                              <span class="st">"Opposition"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Let's check results:</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="fu">docvars</span>(toks_ire)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>   year debate number      foren     name party gov_status
+1  2010 BUDGET     01      Brian  Lenihan    FF Government
+2  2010 BUDGET     02    Richard   Bruton    FG Opposition
+3  2010 BUDGET     03       Joan   Burton   LAB Opposition
+4  2010 BUDGET     04     Arthur   Morgan    SF Opposition
+5  2010 BUDGET     05      Brian    Cowen    FF Government
+6  2010 BUDGET     06       Enda    Kenny    FG Opposition
+7  2010 BUDGET     07     Kieran ODonnell    FG Opposition
+8  2010 BUDGET     08      Eamon  Gilmore   LAB Opposition
+9  2010 BUDGET     09    Michael  Higgins   LAB Opposition
+10 2010 BUDGET     10     Ruairi    Quinn   LAB Opposition
+11 2010 BUDGET     11       John  Gormley Green Government
+12 2010 BUDGET     12      Eamon     Ryan Green Government
+13 2010 BUDGET     13     Ciaran    Cuffe Green Government
+14 2010 BUDGET     14 Caoimhghin OCaolain    SF Opposition</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Merge over and check:</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>sent_ire<span class="sc">$</span>gov_status <span class="ot">&lt;-</span> toks_ire<span class="sc">$</span>gov_status</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>sent_ire</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>                      doc_id negative positive neg_positive neg_negative
+1        Lenihan, Brian (FF)      185      396            0            0
+2       Bruton, Richard (FG)      157      148            0            0
+3         Burton, Joan (LAB)      220      266            0            0
+4        Morgan, Arthur (SF)      250      248            0            0
+5          Cowen, Brian (FF)      147      366            0            0
+6           Kenny, Enda (FG)      101      146            0            0
+7      ODonnell, Kieran (FG)       49       84            0            0
+8       Gilmore, Eamon (LAB)      161      175            0            0
+9     Higgins, Michael (LAB)       37       42            0            0
+10       Quinn, Ruairi (LAB)       34       40            0            0
+11     Gormley, John (Green)       16       56            0            0
+12       Ryan, Eamon (Green)       24       77            0            0
+13     Cuffe, Ciaran (Green)       36       56            0            0
+14 OCaolain, Caoimhghin (SF)      146      145            0            0
+     positivity gov_status
+1   0.759621159 Government
+2  -0.058840500 Opposition
+3   0.189476549 Opposition
+4  -0.008016075 Opposition
+5   0.910170346 Government
+6   0.366966630 Opposition
+7   0.534778865 Opposition
+8   0.083133900 Opposition
+9   0.125163143 Opposition
+10  0.160342650 Opposition
+11  1.230880257 Government
+12  1.151604819 Government
+13  0.436928378 Government
+14 -0.006849342 Opposition</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Redo plot with government status in there:</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sent_ire) <span class="sc">+</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> positivity, </span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="fu">fct_reorder</span>(doc_id, positivity),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> gov_status,</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">shape =</span> gov_status</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span> <span class="co">#lets make the points a bit bigger to see the shapes better</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Sentiment of Irish TD's, 2010 Budget Debate"</span>,</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Estimated sentiment score"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">""</span>,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="st">""</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>       <span class="at">shape =</span> <span class="st">""</span>) <span class="sc">+</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_code_sentiment_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="diagnostics" class="level2">
+<h2 class="anchored" data-anchor-id="diagnostics">Diagnostics</h2>
+<p>So far, we just took the dictionary for granted. But we can actually check which are the most common positive and negative words with the <code>tokens_keep()</code> function. This is useful to check what drives the results.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check top 25 positive tokens</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>toks_ire <span class="sc">|&gt;</span> </span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_keep</span>(<span class="at">pattern =</span> data_dictionary_LSD2015<span class="sc">$</span>positive) <span class="sc">|&gt;</span> </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topfeatures</span>(<span class="at">n =</span> <span class="dv">25</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     benefit      support     recovery         fair       create   confidence 
+          68           52           44           41           39           37 
+     provide         well       credit         help         care         hope 
+          36           33           31           29           28           27 
+        good contribution       better     fairness         like  opportunity 
+          26           26           26           25           24           23 
+     protect    providing  sustainable      forward       ensure   efficiency 
+          22           21           20           20           19           19 
+      vision 
+          19 </code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Check top 25 negative tokens</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>toks_ire <span class="sc">|&gt;</span> </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_keep</span>(<span class="at">pattern =</span> data_dictionary_LSD2015<span class="sc">$</span>negative) <span class="sc">|&gt;</span> </span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">topfeatures</span>(<span class="at">n =</span> <span class="dv">25</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>     ireland       crisis      deficit         debt    difficult     problems 
+          79           47           38           25           22           21 
+       worst      problem      cutting       failed   vulnerable      poverty 
+          21           21           20           19           18           18 
+        hard       burden         lost         poor     affected         pain 
+          17           15           15           15           14           14 
+  opposition        wrong         lose         lack difficulties     collapse 
+          12           12           10           10            9            9 
+   challenge 
+           9 </code></pre>
+</div>
+</div>
+<p>Huh - “Ireland” is a negative token? That’s not ideal for our case here… We can fix this by changing the word “Ireland” in the tokens to something else. Since we drop all tokens that don’t show up in the dictionary anyway, it doesn’t matter that we lose that information. We replace it with a placeholder called “DONTSCORE” and re-run the analysis, using <code>tokens_replace()</code>. The star in “pattern” is a wildcard character that captures anything following “ireland” - it makes it so that we also replace mentions such as “Ireland’s”.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Replacing "ireland":</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>toks_ire_cleaned <span class="ot">&lt;-</span> toks_ire <span class="sc">|&gt;</span> </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_replace</span>(<span class="at">pattern =</span> <span class="st">"ireland*"</span>, </span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>                 <span class="at">replacement =</span> <span class="st">"DONTSCORE"</span>)</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Redoing analysis and plot</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>sent_ire_clean <span class="ot">&lt;-</span> <span class="fu">tokens_lookup</span>(toks_ire_cleaned,</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>                                <span class="at">dictionary =</span> data_dictionary_LSD2015) <span class="sc">|&gt;</span> </span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">convert</span>(<span class="at">to =</span> <span class="st">"data.frame"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">positivity =</span> <span class="fu">log</span>((positive <span class="sc">+</span> .<span class="dv">5</span>) <span class="sc">/</span> (negative <span class="sc">+</span> .<span class="dv">5</span>)))</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>sent_ire_clean<span class="sc">$</span>gov_status <span class="ot">&lt;-</span> toks_ire<span class="sc">$</span>gov_status</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sent_ire_clean) <span class="sc">+</span></span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(</span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> positivity, </span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="fu">fct_reorder</span>(doc_id, positivity),</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">col =</span> gov_status,</span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">shape =</span> gov_status</span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> <span class="dv">3</span>) <span class="sc">+</span> <span class="co">#lets make the points a bit bigger to see the shapes better</span></span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"Sentiment of Irish TD's, 2010 Budget Debate"</span>,</span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="st">"Estimated sentiment score"</span>,</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">""</span>,</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="st">""</span>,</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a>       <span class="at">shape =</span> <span class="st">""</span>) <span class="sc">+</span></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_code_sentiment_files/figure-html/unnamed-chunk-7-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="targeted-sentiment-analysis" class="level2">
+<h2 class="anchored" data-anchor-id="targeted-sentiment-analysis">Targeted sentiment analysis</h2>
+<p>We can target our sentiment analysis around specific terms. Let’s check how these politicians speak about welfare. To do this, we first need to define some keywords related to welfare. In our case, we do this simple and just use the actual word “welfare”, but in a real targeted sentiment analysis, you might want to define additional keywords (e.g.&nbsp;you could use some terms like “social programs”, or the names of explicit welfare programs).</p>
+<p>We choose a window of +/- 10 words around each mention of welfare here. You could choose a larger or smaller window - a good way to decide this is by either doing a close read of the data yourself and marking relevant windows, or using the <code>kwic()</code> command to check a specific window (or both!). We don’t print the output here for space reasons, but it does show up 100 times!</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#first check whether the term occurs in the corpus, and in which context:</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="fu">kwic</span>(toks_ire,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>     <span class="at">pattern =</span> <span class="st">"welfare"</span>,</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>     <span class="at">window =</span> <span class="dv">10</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Keyword-in-context with 100 matches.
+                                  
+        [Lenihan, Brian (FF), 337]
+        [Lenihan, Brian (FF), 494]
+        [Lenihan, Brian (FF), 949]
+       [Lenihan, Brian (FF), 1434]
+       [Lenihan, Brian (FF), 1457]
+       [Lenihan, Brian (FF), 1927]
+       [Lenihan, Brian (FF), 2111]
+       [Lenihan, Brian (FF), 2119]
+       [Lenihan, Brian (FF), 2178]
+       [Lenihan, Brian (FF), 2243]
+       [Lenihan, Brian (FF), 2265]
+       [Lenihan, Brian (FF), 2302]
+       [Lenihan, Brian (FF), 2359]
+       [Lenihan, Brian (FF), 2403]
+       [Lenihan, Brian (FF), 2438]
+       [Lenihan, Brian (FF), 2441]
+       [Lenihan, Brian (FF), 2453]
+       [Lenihan, Brian (FF), 2462]
+       [Lenihan, Brian (FF), 2482]
+       [Lenihan, Brian (FF), 4312]
+       [Bruton, Richard (FG), 150]
+      [Bruton, Richard (FG), 1167]
+      [Bruton, Richard (FG), 1181]
+      [Bruton, Richard (FG), 1196]
+      [Bruton, Richard (FG), 1200]
+      [Bruton, Richard (FG), 1235]
+          [Burton, Joan (LAB), 82]
+         [Burton, Joan (LAB), 329]
+         [Burton, Joan (LAB), 937]
+         [Burton, Joan (LAB), 953]
+         [Burton, Joan (LAB), 975]
+        [Burton, Joan (LAB), 1209]
+        [Burton, Joan (LAB), 1227]
+        [Burton, Joan (LAB), 1241]
+        [Burton, Joan (LAB), 1353]
+        [Burton, Joan (LAB), 2314]
+        [Burton, Joan (LAB), 2661]
+        [Morgan, Arthur (SF), 141]
+        [Morgan, Arthur (SF), 217]
+        [Morgan, Arthur (SF), 538]
+        [Morgan, Arthur (SF), 676]
+        [Morgan, Arthur (SF), 820]
+        [Morgan, Arthur (SF), 846]
+        [Morgan, Arthur (SF), 921]
+       [Morgan, Arthur (SF), 1335]
+       [Morgan, Arthur (SF), 1345]
+       [Morgan, Arthur (SF), 1375]
+       [Morgan, Arthur (SF), 1388]
+       [Morgan, Arthur (SF), 1395]
+       [Morgan, Arthur (SF), 1462]
+       [Morgan, Arthur (SF), 1484]
+       [Morgan, Arthur (SF), 1496]
+       [Morgan, Arthur (SF), 1503]
+       [Morgan, Arthur (SF), 1520]
+       [Morgan, Arthur (SF), 1535]
+       [Morgan, Arthur (SF), 1581]
+       [Morgan, Arthur (SF), 1594]
+       [Morgan, Arthur (SF), 1642]
+       [Morgan, Arthur (SF), 1666]
+       [Morgan, Arthur (SF), 1687]
+       [Morgan, Arthur (SF), 1710]
+       [Morgan, Arthur (SF), 2995]
+          [Cowen, Brian (FF), 724]
+          [Cowen, Brian (FF), 982]
+         [Cowen, Brian (FF), 1716]
+         [Cowen, Brian (FF), 2318]
+         [Cowen, Brian (FF), 2329]
+         [Cowen, Brian (FF), 2341]
+         [Cowen, Brian (FF), 2354]
+         [Cowen, Brian (FF), 2382]
+         [Cowen, Brian (FF), 2399]
+         [Cowen, Brian (FF), 2409]
+         [Cowen, Brian (FF), 2410]
+         [Cowen, Brian (FF), 2459]
+         [Cowen, Brian (FF), 2475]
+         [Cowen, Brian (FF), 2483]
+         [Cowen, Brian (FF), 2496]
+         [Cowen, Brian (FF), 2508]
+         [Cowen, Brian (FF), 2541]
+         [Cowen, Brian (FF), 2570]
+           [Kenny, Enda (FG), 596]
+       [Gilmore, Eamon (LAB), 342]
+      [Gilmore, Eamon (LAB), 1002]
+      [Gilmore, Eamon (LAB), 1428]
+      [Gilmore, Eamon (LAB), 1885]
+       [Gormley, John (Green), 57]
+       [Gormley, John (Green), 64]
+      [Gormley, John (Green), 344]
+        [Ryan, Eamon (Green), 309]
+   [OCaolain, Caoimhghin (SF), 85]
+  [OCaolain, Caoimhghin (SF), 109]
+  [OCaolain, Caoimhghin (SF), 165]
+  [OCaolain, Caoimhghin (SF), 169]
+  [OCaolain, Caoimhghin (SF), 180]
+  [OCaolain, Caoimhghin (SF), 258]
+  [OCaolain, Caoimhghin (SF), 322]
+  [OCaolain, Caoimhghin (SF), 494]
+  [OCaolain, Caoimhghin (SF), 789]
+ [OCaolain, Caoimhghin (SF), 1089]
+ [OCaolain, Caoimhghin (SF), 1821]
+                                                                                                 
+                          economy falling economic prices also cushion effects reduced pay social
+                        also impacted public finances greatly reducing tax take increasing demand
+                  look forward working colleagues government reform closer integration tax social
+                                   approximately € 2 billion 2009 given public service pay social
+                                                savings € 1 billion pay bill € 760 million social
+                                          5 13 gdp 2050 two thirds increase spending going social
+                  problems ireland faces time make far-reaching reforms future adjustments social
+            adjustments social welfare government proud unrivalled record increasing level social
+                                 savings now can put risk extending beyond resources allow reduce
+      internationally particularly payments britain northern ireland know bitter experience 1980s
+        making following targeted changes new applicants rate job-seekers allowance supplementary
+                        per week job offers activation measures refused making adjustments social
+                                            child benefit year cost € 2.5 billion 12 total social
+                                          month bringing rates € 150 € 187 per month respectively
+                  compensated summary budget measures gives details number limited changes social
+                 measures gives details number limited changes social welfare entitlements social
+                                  rose 2009 € 20.4 billion measures announced today reduce social
+                              social welfare spending € 760 million 2010 despite reduction social
+                  rise unemployment 2009 major adjustments announcing today across areas spending
+                        engender confidence taken hard decisions fair preserved real value social
+                                € 45,000 public service expected take bigger cut ministers social
+                                 today see evidence mccarthy report set cuts achieved area social
+                               breath people hoped reduced action report also looked areas social
+            rationalisation minister adopted none rationalisation worse adopted 42 savings social
+                       rationalisation worse adopted 42 savings social welfare side 25 non-social
+                                 front line low-paid public servants pay first euro people social
+                        helmsley school thought burden sharing like taxation little people social
+                       budgets choices minister chose impose burden pain families children social
+                                 message christmas society st vincent de paul touch saying social
+                      hear person genuinely touch ordinary families community say up-front social
+                       soft options believes child benefit soft option believes recipients social
+                      congregated low levels income minister dump winning formula advocate social
+              protect especially bottom benefit scale crisis precisely universal efficient social
+              recovery strategy acknowledged people treasury federal reserve united states social
+                                            budget indicates € 778 million € 4 billion cut social
+                        spending power economy even immediately consumers spend less less cutting
+                          strategy two faces one harsh discipline every citizens including social
+                  months widows disabilities lost jobs businesses wish complicated government cut
+                        child benefit young people threatened take part education training social
+                     people witnessed government committing series con jobs ranging levies social
+              billion deficit government shown willing impoverish low-income families cuts social
+                                decisions next year done nobody favours going easy targets budget
+                 contribute get economy running high salaries contributed deficit payments social
+    parties wholeheartedly bought government's analysis economy provided proposals cutting social
+                          circle high earning households taken harsh vicious measures cuts social
+                         welfare fundamental principle divides sinn féin parties state see social
+                             food level existence approaching budget much talk need reduce social
+                  media commentators acted shamefully towards social provisions state talk social
+                        state talk social welfare bill reference made possibility reducing social
+                                     204 week someone earning excess € 2,000 week problems social
+                 government's watch area incompetent hands reached ruined however problems social
+                                 costing state extra money dealt rates payment cut cutting social
+                    cut cutting social welfare payments detrimental effect economy society social
+                     saved invested abroad spent rent mortgages food utilities essentials cutting
+                    ultimately cause misery receiving end policy accept argument deflation favour
+                                   one side house addressed costs make lie argument people social
+                                       can afford live less already seen effects cuts made social
+                           sector possibly increasing number job losses adding people onto social
+                             power government shows just touch really proposal reduce rate social
+                         undermines main focus economic recovery getting ireland back work social
+                         want go back work government nothing deliver discriminating young adults
+                       1980s suggestions immediate invested see return exchequer way saved social
+                 capital programme housing costs reductions budget part general adjustment social
+           directly indirectly support approximately 80,000 jobs employment subsidy scheme social
+                                  jobs provide net benefit state terms tax revenue reduced social
+                        framed difficult time irish families fully understand needs depend social
+                  government done utmost protect vulnerable people society reductions many social
+           regrettable necessary part adjustment reason reducing payment rates ensure sustainable
+                  continue protect vulnerable state insolvent support rely incomes reductions pay
+                              year-on-year food 6 energy 11 clothing footwear 13 reduction social
+                payments people's pockets anything higher previously support provided irish state
+                               welfare one best europe recent times record increases level social
+                               one best europe recent times record increases level social welfare
+                 level extent social support payments transformed beyond recognition given social
+                         area found scale savings required public expenditure whole means savings
+                          means savings welfare bill unavoidable important now can sustain strong
+                               cut back slightly might drastic cuts future bearing mind increased
+                                       around 3 budget 2009 net reduction minus 1.1 brings social
+                             made ensured viewed three year period spending power people received
+                                   lives rely children live dignity tax revenues 2003 levels left
+                vulnerable people carers disabled blind widows pensioners children protected area
+                  benefit cut early childhood supplement abolished children whose families social
+                            million fianna fáil made modest changes capital taxes instead cutting
+                                analysis easy every person dole one fewer person supported social
+                           take money blind government deputies return home weekend voting social
+                                    cut pay public sector workers nobody comes public life reduce
+                               public life reduce welfare payments however given scale public pay
+                              € 76 million ring-fenced low income families fuel allowances social
+                                    say better us manage affairs taking hard decisions pay social
+                                       big push know sending top low paid workers families social
+                         public service unions however revolt troop lobbies tomorrow support cuts
+                                  bear pain shame shame followers green party shame depend social
+                              followers green party shame depend social welfare cut swathe social
+ benefit schemes assistance schemes jobseekers allowance farm assist pre-retirement supplementary
+                             408 per annum carers association quite rightly pointed carers social
+                 overriding objective budget strive fairness fairness fairness savage cuts social
+                      young people future ireland future minister finance claims experience 1980s
+                                    meaning now pay every month medicines justify cuts pay social
+                     question minister finance minister health children every deputy votes social
+                            savings amounting € 7.623 billion protected low modest incomes social
+            
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+ | welfare |
+                                                                                                       
+ payments effort demanded every citizen budget substantial last big push                               
+ payments two recent budgets sought address shortfall introducing highly progressive                   
+ system broadening tax base renewed programme government accepted recommendations commission           
+ account one third day-to-day spending reductions two areas unavoidable measures                       
+ € 980 million day-to-day spending programmes € 960 million savings                                    
+ pensions remainder public service pensions cost increases scale ignored responsible                   
+ government proud unrivalled record increasing level social welfare payments past                      
+ payments past 12 years increased pension rates approximately 120 unemployment                         
+ rates april's supplementary budget signalled rates payment might reduced cost                         
+ system step labour costs rest economy can trap people protracted                                      
+ allowance persons aged 20 21 years age dependent children reduced                                     
+ rates recognised consumer prices declined rate groups older people experienced                        
+ spending hoped able introduce greater equity making child benefit taxable                             
+ dependent families fully compensated increasing qualified child allowance € 3.80                      
+ entitlements social welfare spending rose 2009 € 20.4 billion measures                                
+ spending rose 2009 € 20.4 billion measures announced today reduce                                     
+ spending € 760 million 2010 despite reduction social welfare spending                                 
+ spending reach € 21.1 billion next year due sharp rise                                                
+ making smallest contribution result deductions rates payment revert 2006 levels                       
+ need protected older citizens reduced cost public services taken action                               
+ two children expected take bigger proportionate cut ministers deception still                         
+ shock sharp intake breath people hoped reduced action report also                                     
+ considered efficiencies spending system rationalisation minister adopted none rationalisation worse   
+ side 25 non-social welfare areas difficult area area required ministers                               
+ areas difficult area area required ministers apply bit imagination actually                           
+ 66 years pay minister asked pony willing confront sort change                                         
+ payments reduced € 8.30 per week carers widows widowers aged                                          
+ aged 66 years stated burden sharing introduced taxation measures higher                               
+ ireland generous can cut yet hear person genuinely touch ordinary                                     
+ ireland 2009 excessively generous cut minister deputy lenihan note budget                             
+ soft options minister choice thousands tax exiles ireland super-wealthy individuals                   
+ cuts back front instead cutting social benefits protect especially bottom                             
+ offers immense advantage recovery strategy acknowledged people treasury federal reserve               
+ spending european economies unique stimulus package allows people bottom able                         
+ package approximately € 500 million cut education headings taking brunt                               
+ payments child benefit families less spend tax yields drop death                                      
+ recipients public servants blank cheque transfer debts bankrupt developers taxpayer                   
+ income € 204 per week christmas bonus course complicated can                                          
+ payments cut young people spent three four five years education                                       
+ cuts april € 54 billion nama rip-off unfortunate taoiseach stay                                       
+ deepen inequality ireland already one unequal states oecd cuts education                              
+ recipients low-income families half-hearted gestures pay cuts small number highest                    
+ recipients failure see delayed worsened inevitable essential develop fair taxation                    
+ public spending workers pay can expected fine gael given day                                          
+ fundamental principle divides sinn féin parties state see social welfare                              
+ right luxury payment can cut depending economic climate families depend                               
+ bill government media commentators acted shamefully towards social provisions state                   
+ bill reference made possibility reducing social welfare spend keeping people                          
+ spend keeping people jobs creating new jobs instead focus rates                                       
+ system definitely fraud ridiculously complicated administration involved system bureaucratic nightmare
+ end costing state extra money dealt rates payment cut cutting                                         
+ payments detrimental effect economy society social welfare payments always returned                   
+ payments always returned economy weekly basis saved invested abroad spent                             
+ expenditure false economy one ultimately cause misery receiving end policy                            
+ cuts fall cost price index year includes mortgage interest number                                     
+ low wages can afford live less already seen effects cuts                                              
+ payments christmas loss christmas bonus double payment affected 1.3 million                           
+ queues grading rate job seeker's allowance age measures taken supplementary                           
+ € 100 € 150 week 20 24 represents cut 25                                                              
+ bill reduced giving people opportunity want want lie homes scrounge                                   
+ entitlements grossly unfair necessary frame realistic terms rather top-down budgeting                 
+ payments tax end next year raised money costed proposals propose                                      
+ public service pay professional fees public spending capital allocations brought                      
+ system helping 73,000 people maintain part-time jobs casual work cost                                 
+ € 30 million € 100 million moreover provide significant net                                           
+ government done utmost protect vulnerable people society reductions many social                       
+ payments regrettable necessary part adjustment reason reducing payment rates ensure                   
+ system can continue protect vulnerable state insolvent support rely incomes                           
+ payments must seen context falls prices cpi fell 6.6 12                                               
+ payment rates less fall prices value payments people's pockets anything                               
+ one best europe recent times record increases level social welfare                                    
+ welfare rates doubled since 2000 past 12 years increased pension                                      
+ rates doubled since 2000 past 12 years increased pension rates                                        
+ accounts one-third day-to-day spending reductions area found scale savings required                   
+ bill unavoidable important now can sustain strong welfare system future                               
+ system future cut back slightly might drastic cuts future bearing                                     
+ rates around 3 budget 2009 net reduction minus 1.1 brings                                             
+ back around 2008 levels however cost living come around 6                                             
+ and-or child benefit remains broadly stable touched state pension older                               
+ rates 2008 levels cutting back spending still prioritising lowest incomes                             
+ available able work willing work provided challenges training opportunities jobs                      
+ christmas payment gone earnest lectures price statistics feed hungry child                            
+ payments people working age fianna fáil abolished property schemes instead                            
+ one person paying exchequer pre-budget statement labour identified adjustments totalling              
+ bill tell constituents choice whip six deputies whip individual choice                                
+ payments however given scale public pay welfare spending option future                                
+ spending option future prosperity independence colleagues green party politics tell                   
+ increased next autumn 11 order ensure levy impact upon money                                          
+ protect services integral equal society parent whose son daughter going                               
+ recipients carers young unemployed fianna fáil backbenchers last week staged                          
+ payments vulnerable sections society fianna fáil backbenchers must surely greatest                    
+ cut swathe social welfare benefit schemes assistance schemes jobseekers allowance                     
+ benefit schemes assistance schemes jobseekers allowance farm assist pre-retirement supplementary      
+ allowance cut widows widowers pensions cut deserted wife's benefit cut                                
+ recipients work payment providing full time care home elderly sick                                    
+ support young unemployed people budget cuts jobseekers allowance 20 21                                
+ system step labour costs rest economy trapped people protracted joblessness                           
+ government claims cost living gone case majority people especially struggling                         
+ cuts get 40-bed hospital facility constituency good luck people kenmare                               
+ recipients public services contrast anti-jobs budget depress irish economy worsen                     </code></pre>
+</div>
+</div>
+<p>We now use <code>tokens_keep()</code> to select the tokens around the keyword(s) only. If you want to define multiple keywords, you can just wrap them in a vector(<code>c("keyword1", "keyword2")</code>). You can also use the <code>phrase()</code> function if you want to define multi-word keywords - let’s add “social program” as well!</p>
+<p>This time, we are going to plot results by party using <code>dfm_group()</code>.</p>
+<div class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>toks_ire_welfare <span class="ot">&lt;-</span> toks_ire <span class="sc">|&gt;</span> </span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_remove</span>(<span class="at">pattern =</span> <span class="st">"ireland*"</span>) <span class="sc">|&gt;</span> <span class="co"># remember: Ireland is a negative word</span></span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_keep</span>(<span class="at">pattern =</span> <span class="fu">phrase</span>(<span class="fu">c</span>(<span class="st">"welfare"</span>, <span class="st">"social program*"</span>)),</span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>              <span class="at">window =</span> <span class="dv">10</span>)</span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">#Now we can run the sentiment analysis the same way as before</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>sent_ire_welfare <span class="ot">&lt;-</span> toks_ire_welfare <span class="sc">|&gt;</span> </span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">tokens_lookup</span>(<span class="at">dictionary =</span> data_dictionary_LSD2015) <span class="sc">|&gt;</span> </span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">dfm_group</span>(party) <span class="sc">|&gt;</span> </span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">convert</span>(<span class="at">to =</span> <span class="st">"data.frame"</span>) <span class="sc">|&gt;</span> </span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">positivity =</span> <span class="fu">log</span>((positive <span class="sc">+</span> .<span class="dv">5</span>) <span class="sc">/</span> (negative <span class="sc">+</span> .<span class="dv">5</span>)))</span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>sent_ire_welfare</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>  doc_id negative positive neg_positive neg_negative positivity
+1     FF       19       40            0            0  0.7308875
+2     FG        9        7            0            0 -0.2363888
+3  Green        1        5            0            0  1.2992830
+4    LAB       22       22            0            0  0.0000000
+5     SF       59       31            0            0 -0.6359888</code></pre>
+</div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Let's plot this again:</span></span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(sent_ire_welfare) <span class="sc">+</span></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="fu">aes</span>(</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> positivity,</span>
+<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="fu">fct_reorder</span>(doc_id, positivity)</span>
+<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">size =</span> <span class="dv">2</span>) <span class="sc">+</span></span>
+<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">"Positivity"</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">y =</span> <span class="st">"Party"</span>,</span>
+<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">title =</span> <span class="st">"Estimated sentiment of Irish parties on welfare"</span>) <span class="sc">+</span></span>
+<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_minimal</span>()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="example_code_sentiment_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Perhaps unsurprising, the Greens are very positive about welfare, although this is based on very few observations. Fianna Fáil, despite being a centre-right party, are also quite positive - perhaps reflecting the fact they are in government at this time and want to advertise their own successes. Among the opposition parties, Labour is the most positive as we may expect from a centre-left party. Fine Gael, another centre-right party, is negative on the topic, as is Sinn Féin (a left-ish, Irish nationalist party whose main issue is the reunification of Ireland). The latter is somewhat surprising, as SF tends to be left, but perhaps reflect their anti-government stance.</p>
+<p>This highlights two drawbacks: First, we need to be careful of what texts we use. A budget debate is probably not the best place to estimate positions on a policy issue, as Sinn Féin’s negativity likely stems from criticism of the government’s welfare plans specifically rather than a negative position on the issue (it is quite likely they are criticising the government for not doing enough!).</p>
+<p>Second, it shows that targeted sentiment analysis can result in quite small sample sizes if few keywords (or overly narrow windows) are chosen. The Greens’ result certainly looks impressive, but it is based on only 6 tokens that are part of the LSD. We should always make sure to check our data to ensure we are not drawing conclusions on an overly small sample.</p>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,190 @@
+---
+title: "Example Code Session 5: Sentiment Analysis"
+format: html
+---
+
+We will briefly go over the basics for sentiment analysis again and take a look at how we can check the words driving a result, and talk at slightly more length about targeted sentiment analysis. We will use a slightly different example text corpus here: ```data_corpus_irishbudget2010```. This corpus consists of 14 speeches from the 2010 budget debate in the Irish parliament, and comes with the ```quanteda.textmodels``` package.
+
+## Basic sentiment analysis
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(quanteda)
+library(quanteda.textmodels)
+```
+
+In order to use a sentiment dictionary, we need to load and tokenize the corpus again, as we did last time. We will also remove stopwords once again, and put the words to lowercase.
+
+```{r}
+corp_ire <- data_corpus_irishbudget2010
+toks_ire <- tokens(corp_ire,
+                   remove_punct = T) |> 
+  tokens_remove(stopwords("en")) |> 
+  tokens_tolower()
+```
+
+Let's apply the Lexicoder Sentiment Dictionary (LSD, see Soroka & Young 2012) and group by party:
+
+```{r}
+sent_ire <- tokens_lookup(toks_ire,
+                          dictionary = data_dictionary_LSD2015) |> 
+  dfm() |> 
+  convert(to = "data.frame")
+
+sent_ire
+```
+
+Let's apply the log odds formula we discussed in class, and then plot overall sentiment. Two quick pointers:  
+
+* We are omitting the negation columns (neg_negative and neg_positive) since the df we just created showed that there are no mentions of those anyway. Normally, you should include them!
+* You are probably not familiar with the ```fct_reorder()``` command in the ggplot call. This is a useful command that re-orders a factor (check [the R documentation](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/factor) for more info what a factor is) by the corresponding values of the variable provided - for example in our code, ```fct_reorder(doc_id, positivity)``` rearranges *doc_id* according to the value of *positivity*.
+
+```{r}
+sent_ire <- mutate(sent_ire,
+                   positivity = log((positive + .5) / (negative + .5))
+)
+
+ggplot(sent_ire) +
+  geom_point(aes(
+    x = positivity, 
+    y = fct_reorder(doc_id, positivity)
+  )) +
+  labs(title = "Sentiment of Irish TD's, 2010 Budget Debate",
+       x = "Estimated sentiment score",
+       y = "") +
+  theme_minimal()
+```
+This is interesting - but what does that tell us? Who are these people? In 2010, the Irish government was a coalition of centre-right party Fianna Fáil (FF) and the Greens (Green). Let's use the document variables to check for the difference of government and opposition. For this, we need to actually access the document variables. There are two ways to do so. One is to use the \$ operator (remember the syntax from the first session: ```dataframe$variable```) to directly access columns. To do so, always pay attention that you actually use the correct
+
+```{r}
+# Creating a government-opposition variable:
+toks_ire$gov_status <- if_else(toks_ire$party %in% c("FF", "Green"),
+                              "Government",
+                              "Opposition")
+
+# Let's check results:
+docvars(toks_ire)
+
+# Merge over and check:
+sent_ire$gov_status <- toks_ire$gov_status
+sent_ire
+
+# Redo plot with government status in there:
+ggplot(sent_ire) +
+  geom_point(aes(
+    x = positivity, 
+    y = fct_reorder(doc_id, positivity),
+    col = gov_status,
+    shape = gov_status
+  ),
+  size = 3) + #lets make the points a bit bigger to see the shapes better
+  labs(title = "Sentiment of Irish TD's, 2010 Budget Debate",
+       x = "Estimated sentiment score",
+       y = "",
+       col = "",
+       shape = "") +
+  theme_minimal()
+```
+
+## Diagnostics
+
+So far, we just took the dictionary for granted. But we can actually check which are the most common positive and negative words with the ```tokens_keep()``` function. This is useful to check what drives the results.
+
+```{r}
+# Check top 25 positive tokens
+toks_ire |> 
+  tokens_keep(pattern = data_dictionary_LSD2015$positive) |> 
+  dfm() |> 
+  topfeatures(n = 25)
+
+# Check top 25 negative tokens
+toks_ire |> 
+  tokens_keep(pattern = data_dictionary_LSD2015$negative) |> 
+  dfm() |> 
+  topfeatures(n = 25)
+```
+Huh - "Ireland" is a negative token? That's not ideal for our case here... We can fix this by changing the word "Ireland" in the tokens to something else. Since we drop all tokens that don't show up in the dictionary anyway, it doesn't matter that we lose that information. We replace it with a placeholder called "DONTSCORE" and re-run the analysis, using ```tokens_replace()```. The star in "pattern" is a wildcard character that captures anything following "ireland" - it makes it so that we also replace mentions such as "Ireland's".
+
+```{r}
+# Replacing "ireland":
+toks_ire_cleaned <- toks_ire |> 
+  tokens_replace(pattern = "ireland*", 
+                 replacement = "DONTSCORE")
+
+# Redoing analysis and plot
+sent_ire_clean <- tokens_lookup(toks_ire_cleaned,
+                                dictionary = data_dictionary_LSD2015) |> 
+  dfm() |> 
+  convert(to = "data.frame") |> 
+  mutate(positivity = log((positive + .5) / (negative + .5)))
+
+sent_ire_clean$gov_status <- toks_ire$gov_status
+
+ggplot(sent_ire_clean) +
+  geom_point(aes(
+    x = positivity, 
+    y = fct_reorder(doc_id, positivity),
+    col = gov_status,
+    shape = gov_status
+  ),
+  size = 3) + #lets make the points a bit bigger to see the shapes better
+  labs(title = "Sentiment of Irish TD's, 2010 Budget Debate",
+       x = "Estimated sentiment score",
+       y = "",
+       col = "",
+       shape = "") +
+  theme_minimal()
+```
+
+## Targeted sentiment analysis
+
+We can target our sentiment analysis around specific terms. Let's check how these politicians speak about welfare. To do this, we first need to define some keywords related to welfare. In our case, we do this simple and just use the actual word "welfare", but in a real targeted sentiment analysis, you might want to define additional keywords (e.g. you could use some terms like "social programs", or the names of explicit welfare programs). 
+
+We choose a window of +/- 10 words around each mention of welfare here. You could choose a larger or smaller window - a good way to decide this is by either doing a close read of the data yourself and marking relevant windows, or using the ```kwic()``` command to check a specific window (or both!). We don't print the output here for space reasons, but it does show up 100 times!
+
+```{r}
+#| message: FALSE
+#first check whether the term occurs in the corpus, and in which context:
+kwic(toks_ire,
+     pattern = "welfare",
+     window = 10)
+```
+
+We now use ```tokens_keep()``` to select the tokens around the keyword(s) only. If you want to define multiple keywords, you can just wrap them in a vector(```c("keyword1", "keyword2")```). You can also use the ```phrase()``` function if you want to define multi-word keywords - let's add "social program" as well!
+
+This time, we are going to plot results by party using ```dfm_group()```.
+
+```{r}
+toks_ire_welfare <- toks_ire |> 
+  tokens_remove(pattern = "ireland*") |> # remember: Ireland is a negative word
+  tokens_keep(pattern = phrase(c("welfare", "social program*")),
+              window = 10)
+
+#Now we can run the sentiment analysis the same way as before
+sent_ire_welfare <- toks_ire_welfare |> 
+  tokens_lookup(dictionary = data_dictionary_LSD2015) |> 
+  dfm() |> 
+  dfm_group(party) |> 
+  convert(to = "data.frame") |> 
+  mutate(positivity = log((positive + .5) / (negative + .5)))
+
+sent_ire_welfare
+
+# Let's plot this again:
+ggplot(sent_ire_welfare) +
+  geom_point(aes(
+    x = positivity,
+    y = fct_reorder(doc_id, positivity)
+  ),
+  size = 2) +
+  labs(x = "Positivity",
+       y = "Party",
+       title = "Estimated sentiment of Irish parties on welfare") +
+  theme_minimal()
+```
+Perhaps unsurprising, the Greens are very positive about welfare, although this is based on very few observations. Fianna Fáil, despite being a centre-right party, are also quite positive - perhaps reflecting the fact they are in government at this time and want to advertise their own successes. Among the opposition parties, Labour is the most positive as we may expect from a centre-left party. Fine Gael, another centre-right party, is negative on the topic, as is Sinn Féin (a left-ish, Irish nationalist party whose main issue is the reunification of Ireland). The latter is somewhat surprising, as SF tends to be left, but perhaps reflect their anti-government stance.
+
+This highlights two drawbacks: First, we need to be careful of what texts we use. A budget debate is probably not the best place to estimate positions on a policy issue, as Sinn Féin's negativity likely stems from criticism of the government's welfare plans specifically rather than a negative position on the issue (it is quite likely they are criticising the government for not doing enough!).
+
+Second, it shows that targeted sentiment analysis can result in quite small sample sizes if few keywords (or overly narrow windows) are chosen. The Greens' result certainly looks impressive, but it is based on only 6 tokens that are part of the LSD. We should always make sure to check our data to ensure we are not drawing conclusions on an overly small sample.
